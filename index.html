@@ -833,7 +833,10 @@ function screenReading() {
       </button>
     </div>
     <div style="flex:1;overflow:auto;padding:8px 22px 24px">
-      <div class="tag tag-accent" style="margin-bottom:12px">${esc(cs.lesson)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <span class="tag tag-accent">${esc(cs.lesson)}</span>
+        ${cs.source ? `<span class="tag tag-accent-2" style="font-size:10px">${cs.source === 'ai' ? '✨ AI story' : 'Sample story'}</span>` : ''}
+      </div>
       <div class="card elev-md" style="margin-bottom:16px">
         <div class="card-kicker">Quick peek</div>
         ${tldr}
