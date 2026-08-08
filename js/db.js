@@ -209,6 +209,28 @@
     }
   };
 
+  // --- AI story generation (via the generate-story Edge Function) -----------
+  var ai = {
+    // params: { character, lesson, length, notes, child:{name,age,gender,preferences} }
+    // returns { tldr: string[], body: string }; throws if the function is
+    // unavailable or errors (caller falls back to the built-in story bank).
+    async generateStory(params) {
+      var res = await client.functions.invoke('generate-story', { body: params });
+      if (res.error) {
+        // Try to surface the function's JSON error message when present
+        var msg = res.error.message || 'generate-story failed';
+        try {
+          if (res.error.context && typeof res.error.context.json === 'function') {
+            var body = await res.error.context.json();
+            if (body && body.error) msg = body.error;
+          }
+        } catch (e) { /* ignore */ }
+        throw new Error(msg);
+      }
+      return res.data; // { tldr, body, model }
+    }
+  };
+
   // --- Public API -----------------------------------------------------------
   global.DB = {
     client: client,
@@ -216,6 +238,7 @@
     children: children,
     stories: stories,
     images: images,
+    generateStory: ai.generateStory,
     _configured: function () {
       return SUPABASE_URL.indexOf('YOUR-PROJECT') === -1 && SUPABASE_ANON_KEY.indexOf('YOUR-ANON') === -1;
     }

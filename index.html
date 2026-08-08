@@ -459,6 +459,30 @@ function esc(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* Generate a story via the Claude-backed Edge Function, falling back to the
+   built-in story bank if the function isn't deployed or the call fails. */
+async function generateStoryContent(character, lessonLabel) {
+  if (window.DB && DB.generateStory) {
+    try {
+      const child = state.profile ? {
+        name: state.profile.name, age: state.profile.age,
+        gender: state.profile.gender, preferences: state.profile.preferences
+      } : null;
+      const res = await DB.generateStory({
+        character: character, lesson: lessonLabel,
+        length: state.storyLength, notes: state.notes, child: child
+      });
+      if (res && Array.isArray(res.tldr) && res.tldr.length && res.body) {
+        return { tldr: res.tldr, body: res.body, source: 'ai' };
+      }
+    } catch (e) {
+      console.warn('[Storyweaver] AI generation unavailable, using template bank:', e && e.message);
+    }
+  }
+  const entry = buildStoryEntry(null, character, lessonLabel, 0, 'Tonight', false);
+  return { tldr: entry.tldr, body: entry.body, source: 'bank', bankIndex: 0 };
+}
+
 const actions = {
   'create-account': () => setState({ screen: 'authForm', authMode: 'create', authError: '' }),
   'login': () => setState({ screen: 'authForm', authMode: 'login', authError: '' }),
@@ -488,26 +512,40 @@ const actions = {
     }
   },
   'toggle-custom': () => setState({ customMode: !state.customMode, selectedLesson: null }),
-  'generate': () => {
+  'generate': async () => {
     if (!canGenerate()) return;
     const lessonLabel = state.customMode ? state.customLesson.trim() : state.selectedLesson;
     const character = state.character.trim();
     setState({ screen: 'loading' });
-    setTimeout(() => {
-      const story = buildStoryEntry(null, character, lessonLabel, 0, 'Tonight', false);
-      story.fromHistory = false;
-      setState({ screen: 'reading', currentStory: story });
-    }, 1100);
+    const content = await generateStoryContent(character, lessonLabel);
+    const story = {
+      id: null, character: character, lesson: lessonLabel,
+      bankIndex: content.bankIndex || 0,
+      tldr: content.tldr, body: content.body,
+      favorite: false, source: content.source, fromHistory: false
+    };
+    setState({ screen: 'reading', currentStory: story });
   },
-  'regenerate': () => {
+  'regenerate': async () => {
     const cs = state.currentStory;
     if (!cs || state.regenerating) return;
     setState({ regenerating: true });
-    setTimeout(() => {
-      const updated = buildStoryEntry(cs.id, cs.character, cs.lesson, cs.bankIndex + 1, cs.date, cs.favorite);
-      updated.fromHistory = cs.fromHistory;
-      setState({ currentStory: updated, regenerating: false });
-    }, 500);
+    let updated;
+    if (cs.source === 'ai') {
+      // A fresh, genuinely different AI story each time
+      const content = await generateStoryContent(cs.character, cs.lesson);
+      updated = Object.assign({}, cs, {
+        tldr: content.tldr, body: content.body, source: content.source,
+        bankIndex: content.bankIndex || cs.bankIndex
+      });
+    } else {
+      // Template fallback: cycle to the next variant in the bank
+      const nextIdx = (cs.bankIndex || 0) + 1;
+      const entry = buildStoryEntry(cs.id, cs.character, cs.lesson, nextIdx, cs.date, cs.favorite);
+      updated = Object.assign({}, cs, { tldr: entry.tldr, body: entry.body, bankIndex: nextIdx, source: 'bank' });
+    }
+    updated.fromHistory = cs.fromHistory;
+    setState({ currentStory: updated, regenerating: false });
   },
   'toggle-favorite': async () => {
     const cs = state.currentStory;

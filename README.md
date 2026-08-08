@@ -14,8 +14,10 @@ Open `index.html` in any modern browser. No build step, no dependencies.
 - **Accounts** — create account / log in (validation-gated)
 - **Story inputs** — character, curated lesson chips + custom lesson, optional
   length, one-off notes
-- **Generation** — instant story with a "Quick peek" TLDR and large,
-  night-friendly reading view
+- **Generation** — a genuinely unique story per request, written by Claude via
+  a Supabase Edge Function (`generate-story`), with a "Quick peek" TLDR and a
+  large, night-friendly reading view. Falls back to a built-in template library
+  if the function isn't deployed. See [SUPABASE_FUNCTIONS.md](SUPABASE_FUNCTIONS.md).
 - **Favorite / Regenerate / Done** — regenerate a different variant, save on finish
 - **Stories** — per-child history, favorites preserved
 - **Profiles** — child detail editor (name, age, gender, standing preferences),
