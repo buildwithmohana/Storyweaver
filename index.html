@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Storyweaver — Bedtime Story App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   Nocturne — design-system tokens and component classes (from the imported
+   _ds/nocturne styles.css). Dark theme; blurple accent.
+   ══════════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-accent-2: #a7a1db;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+
+  --color-neutral-100: #f3f5fe; --color-neutral-200: #e4e7f5; --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca; --color-neutral-500: #9397ab; --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c; --color-neutral-800: #3f424d; --color-neutral-900: #292b31;
+
+  --color-accent-100: #f5f4ff; --color-accent-200: #e7e5fe; --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc; --color-accent-500: #968ae0; --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294; --color-accent-800: #423a6a; --color-accent-900: #2b2741;
+
+  --color-accent-2-100: #f5f4ff; --color-accent-2-200: #e7e5fe; --color-accent-2-300: #d2cefd;
+  --color-accent-2-400: #b5afe8; --color-accent-2-500: #9690c9; --color-accent-2-600: #7972a9;
+  --color-accent-2-700: #5c5783; --color-accent-2-800: #423e5d; --color-accent-2-900: #2b293a;
+
+  --color-section: #262a60;
+  --color-section-glow: #353b80;
+  --color-section-ghost: #4c5397;
+
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-heading-weight: 500;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --space-1: 2.8px; --space-2: 5.6px; --space-3: 8.4px; --space-4: 11.2px;
+  --space-6: 16.8px; --space-8: 22.4px;
+
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 14px;
+
+  --shadow-sm: 0 0 0 1px #3f424d;
+  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0,0,0,0.55);
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0,0,0,0.65);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55; font-weight: 400;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+}
+h1 { font-size: 42px; } h2 { font-size: 32px; } h3 { font-size: 25px; }
+h4 { font-size: 20px; } h5 { font-size: 16px; } h6 { font-size: 13px; }
+h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* — buttons — */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 14px; line-height: 1.2; color: var(--color-text);
+  background: transparent; border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.btn svg { display: block; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { color: var(--color-accent); border-color: var(--color-accent); }
+.btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.btn-primary:active:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active:not(:disabled) { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-block { width: 100%; margin-top: var(--space-2); }
+
+/* — forms — */
+.input {
+  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.input::placeholder { color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+textarea.input { min-height: 64px; resize: vertical; }
+
+/* — cards — */
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* — tags — */
+.tag {
+  display: inline-flex; align-items: center; font-size: 11px;
+  letter-spacing: 0.02em; padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.tag-accent { background: var(--color-accent-800); color: var(--color-accent-100); }
+.tag-accent-2 { background: var(--color-accent-2-800); color: var(--color-accent-2-100); }
+
+/* — app animations — */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes twinkle { 0%,100%{opacity:.35;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity:1; transform:none;} }
+.screen { animation: fadeIn .28s ease both; }
+
+/* ── stage / iOS device frame ─────────────────────────────────────────── */
+.stage {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--color-bg); padding: 48px 20px; box-sizing: border-box;
+  font-family: var(--font-body);
+}
+.ios-device {
+  width: 402px; height: 874px; border-radius: 48px; overflow: hidden;
+  position: relative; background: #000;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+  -webkit-font-smoothing: antialiased; flex-shrink: 0;
+}
+.ios-island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 126px; height: 37px; border-radius: 24px; background: #000; z-index: 50;
+}
+.ios-statusbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 21px 34px 19px; box-sizing: border-box; pointer-events: none;
+}
+.ios-statusbar .time {
+  font-family: -apple-system, "SF Pro", system-ui; font-weight: 600;
+  font-size: 17px; line-height: 22px; color: #fff;
+}
+.ios-statusbar .icons { display: flex; align-items: center; gap: 7px; }
+.ios-content { height: 100%; overflow: hidden; }
+.ios-home {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 60; height: 34px;
+  display: flex; justify-content: center; align-items: flex-end; padding-bottom: 8px;
+  pointer-events: none;
+}
+.ios-home .bar { width: 139px; height: 5px; border-radius: 100px; background: rgba(255,255,255,0.7); }
+
+/* app root fills the content area */
+#app { height: 100%; }
+.app-shell {
+  height: 100%; display: flex; flex-direction: column;
+  font-family: var(--font-body); color: var(--color-text);
+  position: relative; overflow: hidden;
+}
+
+/* star decoration */
+.star {
+  background: var(--color-accent-300);
+  clip-path: polygon(50% 0%,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0% 50%,39% 39%);
+  filter: drop-shadow(0 0 3px var(--color-accent-300));
+  animation: twinkle 2.8s ease-in-out infinite; position: absolute;
+}
+
+/* image-slot placeholder web component styling lives in JS shadow root */
+
+@media (max-width: 460px) {
+  .stage { padding: 0; }
+  .ios-device {
+    width: 100vw; height: 100vh; height: 100dvh; border-radius: 0;
+    box-shadow: none;
+  }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="ios-device">
+    <div class="ios-island"></div>
+    <div class="ios-statusbar">
+      <span class="time">9:41</span>
+      <span class="icons">
+        <svg width="19" height="12" viewBox="0 0 19 12"><rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill="#fff"/><rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill="#fff"/><rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill="#fff"/><rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill="#fff"/></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill="#fff"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill="#fff"/><circle cx="8.5" cy="10.5" r="1.5" fill="#fff"/></svg>
+        <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="#fff" stroke-opacity="0.35" fill="none"/><rect x="2" y="2" width="20" height="9" rx="2" fill="#fff"/><path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill="#fff" fill-opacity="0.4"/></svg>
+      </span>
+    </div>
+    <div class="ios-content"><div id="app"></div></div>
+    <div class="ios-home"><div class="bar"></div></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   <image-slot> — lightweight, offline placeholder that reproduces the
+   imported component's essentials: a tinted placeholder tile with an icon
+   and caption, click-to-fill from a local file, persisted in localStorage.
+   ══════════════════════════════════════════════════════════════════════ */
+(() => {
+  const KEY = 'storyweaver.imageslots.v1';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  const save = (o) => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch {} };
+  let store = load();
+
+  const ICON =
+    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>' +
+    '<path d="m21 15-5-5L5 21"/></svg>';
+
+  class ImageSlot extends HTMLElement {
+    connectedCallback() {
+      const shape = this.getAttribute('shape') || 'rounded';
+      const radius = this.getAttribute('radius') || '12';
+      const placeholder = this.getAttribute('placeholder') || 'Add image';
+      let br = radius + 'px';
+      if (shape === 'circle') br = '50%';
+      if (shape === 'rect') br = '0';
+      this.style.display = 'block'; this.style.position = 'relative';
+      this.style.overflow = 'hidden'; this.style.borderRadius = br;
+      this.style.cursor = 'pointer';
+      this._br = br; this._ph = placeholder;
+      this.render();
+      this.addEventListener('click', () => this.pick());
+    }
+    render() {
+      const id = this.getAttribute('id');
+      const src = id && store[id];
+      if (src) {
+        this.innerHTML =
+          '<img alt="" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:' + this._br + '">';
+        this.querySelector('img').src = src;
+      } else {
+        this.innerHTML =
+          '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;' +
+          'justify-content:center;gap:5px;text-align:center;padding:8px;box-sizing:border-box;' +
+          'background:linear-gradient(150deg, var(--color-accent-800), var(--color-accent-900));' +
+          'color:var(--color-accent-300)">' +
+          '<span style="opacity:.55">' + ICON + '</span>' +
+          '<span style="font-size:9px;line-height:1.2;opacity:.7;max-width:92%">' + this._ph + '</span>' +
+          '</div>';
+      }
+    }
+    pick() {
+      const id = this.getAttribute('id');
+      if (!id) return;
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/avif';
+      inp.onchange = () => {
+        const f = inp.files && inp.files[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => { store[id] = r.result; save(store); this.render(); };
+        r.readAsDataURL(f);
+      };
+      inp.click();
+    }
+  }
+  customElements.define('image-slot', ImageSlot);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Story engine — ported verbatim from the imported prototype's DC script.
+   ══════════════════════════════════════════════════════════════════════ */
+function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+function fillText(str, rawName, lessonLabel) {
+  const name = rawName && rawName.trim() ? rawName.trim() : 'a brave little dreamer';
+  const cap = capFirst(name);
+  return str
+    .split('{Cap}').join(cap)
+    .split('{C}').join(name)
+    .split('{They}').join('They').split('{they}').join('they')
+    .split('{Them}').join('Them').split('{them}').join('them')
+    .split('{Their}').join('Their').split('{their}').join('their')
+    .split('{L}').join(lessonLabel || 'the lesson');
+}
+
+const LESSONS = ['Kindness', 'Helping others', 'Being brave', 'Being strong', 'Eating healthy', 'Standing up for oneself'];
+const STORY_LENGTHS = ['1 min', '3 min', '5 min'];
+
+const STORY_BANK = {
+  'Kindness': [
+    { tldr: ["{Cap} notices a friend having a hard day", "Chooses a small kind act over playing alone", "The kindness comes back around, twice as warm"],
+      body: "Once upon a time, there was {C}. One quiet afternoon, {they} saw a little hedgehog sitting alone by the fence, too shy to ask for help carrying a pile of fallen leaves. {Cap} could have kept playing. Instead, {they} walked over and simply said, \"Want a hand?\" Together they gathered every leaf into a soft golden pile, and the hedgehog smiled for the first time all day. That night, {C} found a little basket of berries waiting on the doorstep — a thank-you from a new friend. Being kind hadn't cost anything at all. It had only made the world a little softer, for both of {them}." },
+    { tldr: ["{Cap} finds a lost teddy bear on the path", "Decides to find its owner instead of keeping it", "A new friendship grows from one kind choice"],
+      body: "One breezy morning, {C} found a raggedy teddy bear lying in the grass, its button eyes looking lonely. It would have been easy to just take it home. But {they} thought about how sad someone must feel, missing their favorite toy. So {they} asked around the whole meadow until {they} found a small rabbit named Pip, sniffling into his paws. \"You found him!\" Pip cried, hugging the bear tight. From that day on, Pip and {C} shared their afternoons together, telling stories under the big oak tree. {Cap} learned that being kind sometimes means giving something back, even when no one is watching." }
+  ],
+  'Helping others': [
+    { tldr: ["{Cap} spots a turtle stuck on its back", "Stops to help even though it takes extra time", "Learns that small help can mean everything"],
+      body: "Down by the pond, {C} was hurrying home when {they} spotted a little turtle flipped upside down, legs waving in the air. {Cap} was in a rush, but something made {them} stop. Gently, {they} turned the turtle right-side up. \"Thank you,\" the turtle said softly. \"I was stuck for a whole hour.\" {Cap} realized that helping someone doesn't take long at all — just a moment, and a little care. The turtle waddled off happily, and {C} walked home with a lighter, happier step." },
+    { tldr: ["{Cap} sees a bird whose nest fell in the wind", "Helps rebuild it twig by twig", "Discovers helping is more fun with a friend"],
+      body: "The wind had knocked a little nest right out of its tree, and a small bluebird was chirping sadly beside it. {C} knelt down and began gathering twigs, one by one. Soon a squirrel hopped over and joined in too. Together, they tucked the nest back into its branch, safe and snug. The bluebird sang the sweetest song {C} had ever heard. {They} learned that helping is even better with company — and that a little teamwork can fix almost anything." }
+  ],
+  'Being brave': [
+    { tldr: ["{Cap} is scared of the dark cave near home", "Takes one small brave step inside anyway", "Discovers the cave — and the fear — wasn't so big after all"],
+      body: "There was a dark little cave at the edge of the forest that {C} had always been too scared to enter. One evening, a soft mewing sound came from inside. {C}'s heart pounded, but {they} took a deep breath and stepped in anyway, one small step at a time. Inside, curled up and shivering, was a tiny lost kitten. {Cap} scooped it up gently and carried it home. Being brave, {they} realized, wasn't about not being scared — it was about taking that one small step anyway." },
+    { tldr: ["{Cap} is asked to go first down the big slide", "Feels wobbly and unsure, but tries anyway", "Learns bravery gets easier every time you practice it"],
+      body: "At the park, all the other animals wanted someone to go first down the tall, twisty slide. Everyone looked at {C}. {Their} tummy felt fluttery, like it was full of moths. But {Cap} climbed to the top anyway, gripped the sides, and let go. Whoosh! Down {they} went, laughing the whole way. It wasn't so scary after all — and the next friend who tried felt braver too, just from watching. {Cap} learned that bravery is like a muscle: the more you use it, the stronger it gets." }
+  ],
+  'Being strong': [
+    { tldr: ["{Cap}'s tower of blocks keeps falling down", "Feels like giving up, but tries one more time", "Being strong means trying again, not never falling"],
+      body: "{C} had been building the tallest block tower all afternoon, and just as the very last block went on top — crash — it all tumbled down. {Cap} wanted to give up right then. But after a deep breath, {they} started again, block by careful block. It fell twice more. Each time, {they} tried again anyway. Finally, the tower stood taller than ever, wobbling proudly in the evening light. {Cap} learned that being strong isn't about never falling down. It's about standing back up, one more time than you fall." },
+    { tldr: ["{Cap} carries a heavy basket of apples up the hill", "Wants to stop halfway, but keeps going step by step", "Discovers strength grows from finishing what you start"],
+      body: "The basket of apples was almost too heavy, and the hill seemed to stretch on forever. Halfway up, {C}'s arms began to shake, and quitting felt so tempting. But {they} thought of everyone waiting at the top for supper, took a breath, and kept climbing — one slow step at a time. At the very top, {Cap} set the basket down with a proud thump, and everyone cheered. {They} realized that strength isn't about how heavy something is. It's about not stopping until you're done." }
+  ],
+  'Eating healthy': [
+    { tldr: ["{Cap} wants to skip the vegetables at dinner", "A wise old owl explains what foods do for our bodies", "{Cap} tries a new veggie and discovers it's not so bad"],
+      body: "At dinner, {C} pushed the green beans to the very edge of the plate, hoping no one would notice. A wise old owl perched nearby chuckled softly. \"Do you know what carrots do for your eyes, or what beans do for your muscles?\" the owl asked. {Cap} shook {their} head. \"They help you run faster, grow taller, and see further in the dark,\" the owl said with a wink. Curious now, {they} tried one small bite of green bean. It was crunchy, a little sweet, and not bad at all. By the end of dinner, the plate was empty — and {C} felt ready to run all the way to the moon." },
+    { tldr: ["{Cap} and friends plant a little vegetable garden", "Watches the vegetables grow from tiny seeds", "Feels proud eating something they grew themselves"],
+      body: "{C} planted three tiny seeds in the garden — one carrot, one pea, and one tomato — and watered them every single day. Weeks passed, and slowly, green shoots pushed up through the soil. When the vegetables were finally ready, {they} picked them with careful hands and helped make a colorful salad for dinner. Every bite tasted a little sweeter, knowing {C} had grown it all alone. {They} learned that healthy food isn't just good for your body — it can be a little bit of magic you grow with your own two hands." }
+  ],
+  'Standing up for oneself': [
+    { tldr: ["A bigger animal keeps cutting in line at the pond", "{Cap} feels nervous, but calmly speaks up", "Learns that a clear, kind voice can fix a lot"],
+      body: "Every day at the pond, a big bullfrog hopped straight to the front of the line, right past everyone waiting for a turn on the lily-pad swing. {C} felt a nervous flutter, but took a breath and said, clearly and kindly, \"We're all waiting for a turn too — can you please wait your turn like everyone else?\" The bullfrog blinked, surprised, then hopped to the back of the line without a fuss. {Cap} felt proud — not because {they} were loud, but because {they} were clear. From then on, the line at the lily-pad swing was always fair." },
+    { tldr: ["A friend keeps picking the same game every time", "{Cap} feels unheard, but finally says what they'd like too", "Discovers their voice matters just as much as anyone else's"],
+      body: "Every afternoon, {C}'s friend picked hide-and-seek, again and again, and {C} quietly went along with it, even though {they} really wanted to play something else. One day, {Cap} finally spoke up: \"Can we take turns choosing? I'd love to play tag today.\" Their friend paused, then smiled. \"Sure! I didn't realize you wanted a turn.\" They played tag all afternoon, laughing until the sun went down. {Cap} learned that saying what you want, kindly and clearly, doesn't push people away — it usually brings people closer." }
+  ]
+};
+
+const CUSTOM_FALLBACK = [
+  { tldr: ["{Cap} faces a moment that tests tonight's lesson", "Makes a choice that puts it into practice", "Carries the lesson forward, a little wiser"],
+    body: "Once upon a time, there was {C}. One evening, a moment came along that tested {L}. {Cap} thought carefully, took a breath, and made a choice {they} could be proud of. By the end of the night, {C} understood {L} a little better than before — not because someone explained it, but because {they} had lived it, one small step at a time. And as the stars came out, {C} felt proud, and a little wiser, drifting off to sleep with a happy heart." },
+  { tldr: ["{Cap} runs into a moment where {L} is put to the test", "Has to choose between the easy path and the right one", "Grows a little braver, kinder, and wiser by morning"],
+    body: "Once upon a time, there was {C}. That night, life presented a small but real test of {L}. It would have been easy to look away, but {they} didn't. {Cap} paused, thought it through, and did the thing that felt right, even though it wasn't the easiest choice. By the time the stars came out, {they} understood {L} in a way no bedtime lecture could have taught. And with a full, happy heart, {C} drifted off to sleep." }
+];
+
+function getBank(lessonLabel) { return STORY_BANK[lessonLabel] || CUSTOM_FALLBACK; }
+
+function buildStoryEntry(id, character, lessonLabel, bankIndex, date, favorite) {
+  const bank = getBank(lessonLabel);
+  const variant = bank[bankIndex % bank.length];
+  return {
+    id, character, lesson: lessonLabel, bankIndex,
+    tldr: variant.tldr.map(t => fillText(t, character, lessonLabel)),
+    body: fillText(variant.body, character, lessonLabel),
+    date, favorite
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   App state + persistence
+   ══════════════════════════════════════════════════════════════════════ */
+const MUTED = 'color-mix(in srgb, var(--color-text) 55%, transparent)';
+const PERSIST_KEY = 'storyweaver.app.v1';
+
+function defaultData() {
+  return {
+    account: null,
+    nextId: 3,
+    profile: { name: 'Mira', age: 4, gender: 'Girl', preferences: "Loves unicorns and dinosaurs. A little afraid of the dark." },
+    history: [
+      buildStoryEntry(2, 'a curious raccoon named Pip', 'Being brave', 0, 'Aug 4', true),
+      buildStoryEntry(1, 'a gentle bear cub named Theo', 'Kindness', 1, 'Aug 1', false)
+    ]
+  };
+}
+
+function loadData() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PERSIST_KEY));
+    if (raw && typeof raw === 'object') return Object.assign(defaultData(), raw);
+  } catch {}
+  return defaultData();
+}
+
+function persist() {
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify({
+      account: state.account, nextId: state.nextId,
+      profile: state.profile, history: state.history
+    }));
+  } catch {}
+}
+
+const data = loadData();
+const state = {
+  screen: data.account ? 'home' : 'welcome',
+  account: data.account,
+  authMode: 'create',
+  authEmail: '',
+  authPassword: '',
+  character: '',
+  selectedLesson: null,
+  customMode: false,
+  customLesson: '',
+  storyLength: '3 min',
+  notes: '',
+  currentStory: null,
+  regenerating: false,
+  addChildTapped: false,
+  profileDetailOpen: false,
+  deleteConfirm: false,
+  nextId: data.nextId,
+  profile: data.profile,
+  history: data.history
+};
+
+function setState(patch) {
+  Object.assign(state, patch);
+  persist();
+  render();
+}
+
+function canGenerate() {
+  return !!state.character.trim() && !!(state.customMode ? state.customLesson.trim() : state.selectedLesson);
+}
+function authValid() {
+  return !!(state.authEmail.trim() && state.authPassword.trim().length >= 4);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Actions
+   ══════════════════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const actions = {
+  'create-account': () => setState({ screen: 'authForm', authMode: 'create' }),
+  'login': () => setState({ screen: 'authForm', authMode: 'login' }),
+  'back-welcome': () => setState({ screen: 'welcome' }),
+  'toggle-auth-mode': () => setState({ authMode: state.authMode === 'create' ? 'login' : 'create' }),
+  'submit-auth': () => {
+    if (!authValid()) return;
+    setState({ screen: 'home', account: { email: state.authEmail.trim() }, authPassword: '' });
+  },
+  'toggle-custom': () => setState({ customMode: !state.customMode, selectedLesson: null }),
+  'generate': () => {
+    if (!canGenerate()) return;
+    const lessonLabel = state.customMode ? state.customLesson.trim() : state.selectedLesson;
+    const character = state.character.trim();
+    const id = state.nextId;
+    setState({ screen: 'loading', nextId: state.nextId + 1 });
+    setTimeout(() => {
+      const story = buildStoryEntry(id, character, lessonLabel, 0, 'Tonight', false);
+      story.fromHistory = false;
+      setState({ screen: 'reading', currentStory: story });
+    }, 1100);
+  },
+  'regenerate': () => {
+    const cs = state.currentStory;
+    if (!cs || state.regenerating) return;
+    setState({ regenerating: true });
+    setTimeout(() => {
+      const updated = buildStoryEntry(cs.id, cs.character, cs.lesson, cs.bankIndex + 1, cs.date, cs.favorite);
+      updated.fromHistory = cs.fromHistory;
+      setState({ currentStory: updated, regenerating: false });
+    }, 500);
+  },
+  'toggle-favorite': () => {
+    const cs = state.currentStory;
+    if (!cs) return;
+    const updated = Object.assign({}, cs, { favorite: !cs.favorite });
+    let history = state.history;
+    if (history.some(h => h.id === updated.id)) history = history.map(h => h.id === updated.id ? Object.assign({}, h, { favorite: updated.favorite }) : h);
+    setState({ currentStory: updated, history });
+  },
+  'finish': () => {
+    const cs = state.currentStory;
+    if (!cs) return;
+    if (!cs.fromHistory) {
+      setState({
+        screen: 'home', history: [cs, ...state.history], currentStory: null,
+        character: '', selectedLesson: null, customMode: false, customLesson: '', notes: ''
+      });
+    } else {
+      setState({ screen: 'history', currentStory: null });
+    }
+  },
+  'back-reading': () => {
+    const cs = state.currentStory;
+    setState({ screen: cs && cs.fromHistory ? 'history' : 'home', currentStory: cs && cs.fromHistory ? cs : null });
+  },
+  'open-profile-detail': () => setState({ profileDetailOpen: true }),
+  'back-profile-list': () => setState({ profileDetailOpen: false, deleteConfirm: false }),
+  'add-child': () => setState({ addChildTapped: true }),
+  'log-out': () => setState({ screen: 'welcome', account: null, authEmail: '', authPassword: '' }),
+  'ask-delete': () => setState({ deleteConfirm: true }),
+  'cancel-delete': () => setState({ deleteConfirm: false }),
+  'confirm-delete': () => setState({ profile: null, history: [], profileDetailOpen: false, deleteConfirm: false }),
+  'tab-home': () => setState({ screen: 'home', currentStory: null, profileDetailOpen: false }),
+  'tab-history': () => setState({ screen: 'history', currentStory: null, profileDetailOpen: false }),
+  'tab-profile': () => setState({ screen: 'profile', currentStory: null, profileDetailOpen: false })
+};
+
+function handleClick(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-action');
+  if (action === 'pick-lesson') {
+    setState({ selectedLesson: el.getAttribute('data-lesson'), customMode: false, customLesson: '' });
+    return;
+  }
+  if (action === 'pick-length') { setState({ storyLength: el.getAttribute('data-length') }); return; }
+  if (action === 'open-item') {
+    const item = state.history.find(h => String(h.id) === el.getAttribute('data-id'));
+    if (item) setState({ screen: 'reading', currentStory: Object.assign({}, item, { fromHistory: true }) });
+    return;
+  }
+  if (actions[action]) actions[action]();
+}
+
+/* input handling — update state silently, refresh only dynamic controls to
+   keep focus/caret in place while typing */
+function handleInput(e) {
+  const el = e.target.closest('[data-field]');
+  if (!el) return;
+  const field = el.getAttribute('data-field');
+  const map = {
+    'auth-email': 'authEmail', 'auth-password': 'authPassword',
+    'character': 'character', 'custom-lesson': 'customLesson', 'notes': 'notes'
+  };
+  if (map[field]) { state[map[field]] = el.value; syncControls(); persist(); return; }
+  if (field === 'name') { state.profile = Object.assign({}, state.profile, { name: el.value }); persist(); return; }
+  if (field === 'age') { state.profile = Object.assign({}, state.profile, { age: el.value }); persist(); return; }
+  if (field === 'gender') { state.profile = Object.assign({}, state.profile, { gender: el.value }); persist(); return; }
+  if (field === 'preferences') { state.profile = Object.assign({}, state.profile, { preferences: el.value }); persist(); return; }
+}
+
+/* toggle disabled state of context buttons without a re-render */
+function syncControls() {
+  const gen = document.querySelector('[data-action="generate"]');
+  if (gen) gen.disabled = !canGenerate();
+  const auth = document.querySelector('[data-action="submit-auth"]');
+  if (auth) auth.disabled = !authValid();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Screens (markup mirrors the imported prototype)
+   ══════════════════════════════════════════════════════════════════════ */
+function stars(specs) {
+  return specs.map(s =>
+    `<div class="star" style="width:${s.w}px;height:${s.w}px;${s.pos};animation-duration:${s.d}s;animation-delay:${s.delay||0}s"></div>`
+  ).join('');
+}
+
+function screenWelcome() {
+  return `
+  <div class="screen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:linear-gradient(180deg, var(--color-section) 0%, var(--color-bg) 85%);padding:20px 32px;box-sizing:border-box;text-align:center;position:relative;overflow:hidden">
+    ${stars([
+      {w:8,pos:'top:70px;left:44px',d:2.6},
+      {w:10,pos:'top:130px;right:56px',d:3.2,delay:.4},
+      {w:8,pos:'bottom:170px;left:70px',d:2.9,delay:.7}
+    ])}
+    <div style="position:relative;z-index:1">
+      <h1 style="margin:0 0 8px;font-size:28px">Storyweaver</h1>
+      <div style="font-size:14px;color:color-mix(in srgb, var(--color-text) 65%, transparent);line-height:1.5">A new bedtime story every night — built around your child's favorite character and the lesson you want them to fall asleep on.</div>
+    </div>
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px;position:relative;z-index:1">
+      <button class="btn btn-primary btn-block" style="font-size:15px;padding:12px" data-action="create-account">Create account</button>
+      <button class="btn btn-secondary btn-block" style="font-size:15px;padding:12px" data-action="login">Log in</button>
+    </div>
+  </div>`;
+}
+
+function screenAuth() {
+  const title = state.authMode === 'create' ? 'Create your account' : 'Log in';
+  const submitLabel = state.authMode === 'create' ? 'Create account' : 'Log in';
+  const switchLabel = state.authMode === 'create' ? 'Already have an account? Log in' : 'New here? Create account';
+  return `
+  <div class="screen" style="flex:1;display:flex;flex-direction:column;background:var(--color-bg);padding:60px 24px 30px;box-sizing:border-box">
+    <button data-action="back-welcome" style="background:none;border:none;color:var(--color-text);opacity:.7;cursor:pointer;padding:0;display:flex;margin-bottom:22px">
+      <svg width="11" height="18" viewBox="0 0 11 18" fill="none"><path d="M9 1L2 9l7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <h1 style="margin:0 0 18px;font-size:24px">${title}</h1>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Email</label>
+      <input class="input" type="email" placeholder="you@example.com" data-field="auth-email" value="${esc(state.authEmail)}">
+    </div>
+    <div style="margin-bottom:24px">
+      <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Password</label>
+      <input class="input" type="password" placeholder="••••••••" data-field="auth-password" value="${esc(state.authPassword)}">
+    </div>
+    <button class="btn btn-primary btn-block" ${authValid() ? '' : 'disabled'} data-action="submit-auth" style="font-size:15px;padding:12px">${submitLabel}</button>
+    <button data-action="toggle-auth-mode" style="background:none;border:none;color:var(--color-accent-300);font-size:13px;cursor:pointer;margin-top:16px;font-family:var(--font-body)">${switchLabel}</button>
+  </div>`;
+}
+
+function screenHome() {
+  const lessonChips = LESSONS.map(label => {
+    const selected = !state.customMode && state.selectedLesson === label;
+    const bg = selected ? 'var(--color-accent-800)' : 'var(--color-surface)';
+    const color = selected ? 'var(--color-accent-100)' : 'var(--color-text)';
+    const border = selected ? 'var(--color-accent)' : 'var(--color-divider)';
+    return `<button data-action="pick-lesson" data-lesson="${esc(label)}" style="border:1px solid ${border};background:${bg};color:${color};font-size:13px;padding:7px 13px;border-radius:999px;cursor:pointer;font-family:var(--font-body);white-space:nowrap">${label}</button>`;
+  }).join('');
+  const customBorder = state.customMode ? 'var(--color-accent)' : 'var(--color-divider)';
+  const customColor = state.customMode ? 'var(--color-accent-300)' : MUTED;
+  const lengthChips = STORY_LENGTHS.map(label => {
+    const selected = state.storyLength === label;
+    const bg = selected ? 'var(--color-accent-800)' : 'var(--color-surface)';
+    const color = selected ? 'var(--color-accent-100)' : 'var(--color-text)';
+    const border = selected ? 'var(--color-accent)' : 'var(--color-divider)';
+    return `<button data-action="pick-length" data-length="${esc(label)}" style="border:1px solid ${border};background:${bg};color:${color};font-size:13px;padding:7px 13px;border-radius:999px;cursor:pointer;font-family:var(--font-body);white-space:nowrap">${label}</button>`;
+  }).join('');
+
+  return `
+  <div class="screen" style="flex:1;overflow:auto;background:var(--color-bg);box-sizing:border-box">
+    <div style="position:relative;overflow:hidden;padding:60px 20px 26px;background:linear-gradient(180deg, var(--color-section) 0%, var(--color-bg) 100%);border-radius:0 0 var(--radius-lg) var(--radius-lg)">
+      ${stars([
+        {w:8,pos:'top:24px;left:34px',d:2.6},
+        {w:10,pos:'top:44px;left:120px',d:3.2,delay:.3},
+        {w:8,pos:'top:20px;right:110px',d:2.9,delay:.6},
+        {w:6,pos:'top:90px;left:200px',d:3.5,delay:.5},
+        {w:5,pos:'top:14px;left:200px',d:2.3,delay:.9},
+        {w:7,pos:'top:100px;right:40px',d:2.8,delay:1.1},
+        {w:5,pos:'top:60px;right:170px',d:3.1,delay:.2}
+      ])}
+      <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
+        <div>
+          <div style="font-size:11px;color:color-mix(in srgb, var(--color-text) 55%, transparent);text-transform:uppercase;letter-spacing:.08em">Good evening</div>
+          <h1 style="margin:2px 0 0;font-size:25px">Tonight's story</h1>
+        </div>
+        <div style="width:88px;height:88px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:var(--shadow-md)">
+          <image-slot id="avatar-mira-home" shape="circle" placeholder="avatar" style="width:88px;height:88px"></image-slot>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:20px 20px 100px;box-sizing:border-box">
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Who's the story about?</label>
+        <input class="input" type="text" placeholder="e.g. a brave little fox named Momo" data-field="character" value="${esc(state.character)}">
+      </div>
+
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12px;margin-bottom:8px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Tonight's lesson</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${lessonChips}
+          <button data-action="toggle-custom" style="border:1px dashed ${customBorder};background:transparent;color:${customColor};font-size:13px;padding:7px 13px;border-radius:999px;cursor:pointer;font-family:var(--font-body);white-space:nowrap">+ Write my own</button>
+        </div>
+        ${state.customMode ? `<input class="input" type="text" style="margin-top:10px" placeholder="e.g. patience, curiosity, sharing" data-field="custom-lesson" value="${esc(state.customLesson)}">` : ''}
+      </div>
+
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12px;margin-bottom:8px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Story length (optional)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${lengthChips}</div>
+      </div>
+
+      <div style="margin-bottom:26px">
+        <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Anything else? (optional)</label>
+        <textarea class="input" placeholder="e.g. no scary parts tonight" data-field="notes">${esc(state.notes)}</textarea>
+      </div>
+
+      <button class="btn btn-primary btn-block" ${canGenerate() ? '' : 'disabled'} data-action="generate" style="font-size:15px;padding:12px">Generate story</button>
+    </div>
+  </div>`;
+}
+
+function screenLoading() {
+  return `
+  <div class="screen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(180deg, var(--color-section) 0%, var(--color-bg) 100%);padding:20px;box-sizing:border-box;text-align:center;position:relative;overflow:hidden">
+    ${stars([
+      {w:8,pos:'top:60px;left:40px',d:2.5},
+      {w:10,pos:'top:120px;right:56px',d:3.1,delay:.4},
+      {w:8,pos:'bottom:140px;left:70px',d:2.8,delay:.7},
+      {w:8,pos:'bottom:90px;right:90px',d:3.4,delay:.2}
+    ])}
+    <div style="width:52px;height:52px;border-radius:50%;border:3px solid var(--color-accent-800);border-top-color:var(--color-accent);animation:spin 0.9s linear infinite;position:relative;z-index:1"></div>
+    <div style="font-size:16px;position:relative;z-index:1">Dreaming up tonight's story…</div>
+    <div style="font-size:13px;color:color-mix(in srgb, var(--color-text) 55%, transparent);position:relative;z-index:1">Just a few more seconds</div>
+  </div>`;
+}
+
+function screenReading() {
+  const cs = state.currentStory;
+  if (!cs) return '';
+  const favoriteFill = cs.favorite ? 'var(--color-accent)' : 'none';
+  const tldr = cs.tldr.map(line =>
+    `<div style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;margin-top:6px">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);margin-top:7px;flex-shrink:0"></span>
+      <span>${esc(line)}</span>
+    </div>`).join('');
+  const showActions = !cs.fromHistory;
+  return `
+  <div class="screen" style="flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg, var(--color-section) 0%, var(--color-bg) 40%);position:relative;overflow:hidden">
+    ${stars([
+      {w:8,pos:'top:44px;left:50px',d:2.7},
+      {w:10,pos:'top:70px;right:60px',d:3.3,delay:.5}
+    ])}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:56px 20px 8px;position:relative;z-index:1">
+      <button data-action="back-reading" style="background:none;border:none;color:var(--color-text);opacity:.7;cursor:pointer;padding:0;display:flex">
+        <svg width="11" height="18" viewBox="0 0 11 18" fill="none"><path d="M9 1L2 9l7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <button data-action="toggle-favorite" style="background:none;border:none;cursor:pointer;padding:0;display:flex">
+        <svg width="21" height="19" viewBox="0 0 21 19"><path d="M10.5 18C4 13.5 0.5 10 0.5 6.2 0.5 3 3 0.7 6 0.7c1.8 0 3.5.9 4.5 2.4C11.5 1.6 13.2.7 15 .7c3 0 5.5 2.3 5.5 5.5 0 3.8-3.5 7.3-10 11.8z" fill="${favoriteFill}" stroke="var(--color-accent)" stroke-width="1.3"></path></svg>
+      </button>
+    </div>
+    <div style="flex:1;overflow:auto;padding:8px 22px 24px">
+      <div class="tag tag-accent" style="margin-bottom:12px">${esc(cs.lesson)}</div>
+      <div class="card elev-md" style="margin-bottom:16px">
+        <div class="card-kicker">Quick peek</div>
+        ${tldr}
+      </div>
+      <div style="font-size:19px;line-height:1.75;white-space:pre-wrap">${esc(cs.body)}</div>
+    </div>
+    ${showActions ? `
+    <div style="padding:14px 20px 26px;display:flex;gap:10px">
+      <button class="btn btn-secondary" ${state.regenerating ? 'disabled' : ''} data-action="regenerate" style="flex:1;font-size:14px">${state.regenerating ? 'Regenerating…' : 'Regenerate'}</button>
+      <button class="btn btn-primary" data-action="finish" style="flex:1;font-size:14px">Done</button>
+    </div>` : ''}
+  </div>`;
+}
+
+function screenHistory() {
+  const title = state.profile ? `${state.profile.name}'s stories` : 'Stories';
+  const items = state.history.map(h => {
+    const heartFill = h.favorite ? 'var(--color-accent)' : 'none';
+    return `
+    <button data-action="open-item" data-id="${esc(h.id)}" style="display:flex;gap:12px;text-align:left;background:var(--color-surface);border:none;border-radius:var(--radius-md);padding:10px;cursor:pointer;font-family:var(--font-body);color:var(--color-text);align-items:center">
+      <div style="width:88px;height:88px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0">
+        <image-slot id="cover-${esc(h.id)}" shape="rounded" radius="8" placeholder="cover" style="width:88px;height:88px"></image-slot>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span class="tag tag-accent-2" style="font-size:10px">${esc(h.lesson)}</span>
+          <span style="font-size:11px;color:color-mix(in srgb, var(--color-text) 50%, transparent)">${esc(h.date)}</span>
+        </div>
+        <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.character)}</div>
+        <div style="font-size:12px;color:color-mix(in srgb, var(--color-text) 55%, transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.tldr[0])}</div>
+      </div>
+      <svg width="16" height="15" viewBox="0 0 21 19" style="flex-shrink:0"><path d="M10.5 18C4 13.5 0.5 10 0.5 6.2 0.5 3 3 0.7 6 0.7c1.8 0 3.5.9 4.5 2.4C11.5 1.6 13.2.7 15 .7c3 0 5.5 2.3 5.5 5.5 0 3.8-3.5 7.3-10 11.8z" fill="${heartFill}" stroke="var(--color-accent)" stroke-width="1.3"></path></svg>
+    </button>`;
+  }).join('');
+  const empty = state.history.length ? '' :
+    `<div style="text-align:center;color:${MUTED};font-size:13px;margin-top:40px">No stories yet. Generate one tonight!</div>`;
+  return `
+  <div class="screen" style="flex:1;overflow:auto;background:var(--color-bg);padding:60px 20px 100px;box-sizing:border-box">
+    <h1 style="font-size:24px;margin:0 0 16px">${esc(title)}</h1>
+    <div style="display:flex;flex-direction:column;gap:12px">${items}</div>
+    ${empty}
+  </div>`;
+}
+
+function screenProfile() {
+  const showList = !state.profileDetailOpen;
+  const showDetail = state.profileDetailOpen && !!state.profile;
+  let inner = '';
+  if (showList) {
+    const profileTile = state.profile ? `
+      <button data-action="open-profile-detail" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:var(--font-body);color:var(--color-text);width:88px">
+        <div style="width:84px;height:84px;border-radius:50%;overflow:hidden">
+          <image-slot id="avatar-mira-profile" shape="circle" placeholder="child avatar" style="width:84px;height:84px"></image-slot>
+        </div>
+        <span style="font-size:13px;font-weight:500">${esc(state.profile.name)}</span>
+      </button>` : '';
+    inner = `
+      <h1 style="font-size:24px;margin:0 0 20px">Children</h1>
+      <div style="display:flex;flex-wrap:wrap;gap:20px">
+        ${profileTile}
+        <button data-action="add-child" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:var(--font-body);color:var(--color-text);width:88px">
+          <div style="width:84px;height:84px;border-radius:50%;border:1px dashed var(--color-divider);display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3v16M3 11h16" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+          </div>
+          <span style="font-size:13px;color:color-mix(in srgb, var(--color-text) 65%, transparent)">Add child</span>
+        </button>
+      </div>
+      ${state.addChildTapped ? `<div style="font-size:12px;color:color-mix(in srgb, var(--color-text) 55%, transparent);margin-top:16px">More profiles are coming soon</div>` : ''}
+      <div class="card elev-sm" style="margin-top:28px">
+        <div class="card-kicker">Account</div>
+        <div style="font-size:14px">${esc(state.account ? state.account.email : '')}</div>
+        <button class="btn btn-secondary" style="margin-top:6px" data-action="log-out">Log out</button>
+      </div>`;
+  } else if (showDetail) {
+    inner = `
+      <button data-action="back-profile-list" style="background:none;border:none;color:var(--color-text);opacity:.7;cursor:pointer;padding:0;display:flex;margin-bottom:18px">
+        <svg width="11" height="18" viewBox="0 0 11 18" fill="none"><path d="M9 1L2 9l7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div style="display:flex;justify-content:center;margin-bottom:18px">
+        <div style="width:84px;height:84px;border-radius:50%;overflow:hidden">
+          <image-slot id="avatar-mira-profile-detail" shape="circle" placeholder="child avatar" style="width:84px;height:84px"></image-slot>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Name</label>
+        <input class="input" type="text" data-field="name" value="${esc(state.profile.name)}">
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:16px">
+        <div style="flex:1">
+          <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Age</label>
+          <input class="input" type="number" min="0" data-field="age" value="${esc(state.profile.age)}">
+        </div>
+        <div style="flex:1">
+          <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Gender</label>
+          <input class="input" type="text" data-field="gender" value="${esc(state.profile.gender)}">
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Standing preferences</label>
+        <textarea class="input" style="min-height:90px" placeholder="e.g. loves unicorns, into dinosaurs and space, afraid of the dark" data-field="preferences">${esc(state.profile.preferences)}</textarea>
+      </div>
+      ${!state.deleteConfirm ? `<button class="btn btn-secondary btn-block" style="margin-top:24px" data-action="ask-delete">Delete profile</button>` : `
+      <div class="card elev-sm" style="margin-top:24px;text-align:center">
+        <div style="font-size:13px">Delete ${esc(state.profile.name)}'s profile? This also removes all of their saved stories.</div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-secondary" style="flex:1" data-action="cancel-delete">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" data-action="confirm-delete">Delete</button>
+        </div>
+      </div>`}`;
+  }
+  return `
+  <div class="screen" style="flex:1;overflow:auto;background:var(--color-bg);padding:60px 20px 100px;box-sizing:border-box">
+    ${inner}
+  </div>`;
+}
+
+function tabBar() {
+  const c = (screen) => state.screen === screen ? 'var(--color-accent)' : MUTED;
+  return `
+  <div style="display:flex;border-top:1px solid var(--color-divider);background:var(--color-surface);padding:10px 20px 6px">
+    <button data-action="tab-home" style="flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:${c('home')}">
+      <svg width="20" height="19" viewBox="0 0 20 19" fill="none"><path d="M2 8.5L10 1l8 7.5V18H2V8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+      <span style="font-size:10px">Home</span>
+    </button>
+    <button data-action="tab-history" style="flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:${c('history')}">
+      <svg width="20" height="18" viewBox="0 0 21 19" fill="none"><path d="M10.5 18C4 13.5 0.5 10 0.5 6.2 0.5 3 3 0.7 6 0.7c1.8 0 3.5.9 4.5 2.4C11.5 1.6 13.2.7 15 .7c3 0 5.5 2.3 5.5 5.5 0 3.8-3.5 7.3-10 11.8z" stroke="currentColor" stroke-width="1.6"></path></svg>
+      <span style="font-size:10px">Stories</span>
+    </button>
+    <button data-action="tab-profile" style="flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:${c('profile')}">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="5.5" r="3.3" stroke="currentColor" stroke-width="1.6"></circle><path d="M2 17c0-3.6 3.1-6 7-6s7 2.4 7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+      <span style="font-size:10px">Profile</span>
+    </button>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Render loop
+   ══════════════════════════════════════════════════════════════════════ */
+function currentScreenHTML() {
+  switch (state.screen) {
+    case 'welcome': return screenWelcome();
+    case 'authForm': return screenAuth();
+    case 'home': return screenHome();
+    case 'loading': return screenLoading();
+    case 'reading': return screenReading();
+    case 'history': return screenHistory();
+    case 'profile': return screenProfile();
+    default: return screenWelcome();
+  }
+}
+
+function render() {
+  const showTabBar = ['home', 'history', 'profile'].includes(state.screen);
+  document.getElementById('app').innerHTML =
+    `<div class="app-shell">${currentScreenHTML()}${showTabBar ? tabBar() : ''}</div>`;
+}
+
+const app = document.getElementById('app');
+app.addEventListener('click', handleClick);
+app.addEventListener('input', handleInput);
+render();
+</script>
+</body>
+</html>
