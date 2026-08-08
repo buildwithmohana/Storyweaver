@@ -215,10 +215,13 @@ textarea.input { min-height: 64px; resize: vertical; }
    and caption, click-to-fill from a local file, persisted in localStorage.
    ══════════════════════════════════════════════════════════════════════ */
 (() => {
-  const KEY = 'storyweaver.imageslots.v1';
-  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
-  const save = (o) => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch {} };
-  let store = load();
+  // Offline fallback store (used only when no Supabase-backed backend is present)
+  const LS_KEY = 'storyweaver.imageslots.v1';
+  const lsLoad = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
+  const lsSave = (o) => { try { localStorage.setItem(LS_KEY, JSON.stringify(o)); } catch {} };
+  let lsStore = lsLoad();
+
+  const backend = () => window.ImageSlotBackend || null;
 
   const ICON =
     '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -238,17 +241,26 @@ textarea.input { min-height: 64px; resize: vertical; }
       this.style.overflow = 'hidden'; this.style.borderRadius = br;
       this.style.cursor = 'pointer';
       this._br = br; this._ph = placeholder;
-      this.render();
+      this._uploading = false;
+      // instant paint from cache (or fallback store), then refresh from storage
+      const b = backend(); const id = this.getAttribute('id');
+      let initial = null;
+      if (b && id && b.peek) { try { initial = b.peek(id); } catch (e) {} }
+      else if (!b && id) initial = lsStore[id];
+      this.render(initial);
+      this.hydrate();
       this.addEventListener('click', () => this.pick());
     }
-    render() {
-      const id = this.getAttribute('id');
-      const src = id && store[id];
+    render(src) {
       if (src) {
         this.innerHTML =
           '<img alt="" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:' + this._br + '">';
         this.querySelector('img').src = src;
       } else {
+        const spinner = this._uploading
+          ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)">' +
+            '<div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--color-accent-800);border-top-color:var(--color-accent);animation:spin .9s linear infinite"></div></div>'
+          : '';
         this.innerHTML =
           '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;' +
           'justify-content:center;gap:5px;text-align:center;padding:8px;box-sizing:border-box;' +
@@ -256,20 +268,40 @@ textarea.input { min-height: 64px; resize: vertical; }
           'color:var(--color-accent-300)">' +
           '<span style="opacity:.55">' + ICON + '</span>' +
           '<span style="font-size:9px;line-height:1.2;opacity:.7;max-width:92%">' + this._ph + '</span>' +
-          '</div>';
+          '</div>' + spinner;
       }
+    }
+    async hydrate() {
+      const b = backend(); const id = this.getAttribute('id');
+      if (!b || !id || !b.resolve) return;
+      try {
+        const url = await b.resolve(id);
+        if (url && this.isConnected && !this._uploading) this.render(url);
+      } catch (e) {}
     }
     pick() {
       const id = this.getAttribute('id');
-      if (!id) return;
+      if (!id || this._uploading) return;
       const inp = document.createElement('input');
       inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/avif';
-      inp.onchange = () => {
+      inp.onchange = async () => {
         const f = inp.files && inp.files[0];
         if (!f) return;
-        const r = new FileReader();
-        r.onload = () => { store[id] = r.result; save(store); this.render(); };
-        r.readAsDataURL(f);
+        const b = backend();
+        if (b && b.upload) {
+          this._uploading = true; this.render(null);
+          try {
+            const url = await b.upload(id, f);
+            this._uploading = false; this.render(url || null);
+          } catch (e) {
+            this._uploading = false; this.render(null);
+            alert('Image upload failed: ' + ((e && e.message) || 'unknown error'));
+          }
+        } else {
+          const r = new FileReader();
+          r.onload = () => { lsStore[id] = r.result; lsSave(lsStore); this.render(r.result); };
+          r.readAsDataURL(f);
+        }
       };
       inp.click();
     }
@@ -926,6 +958,75 @@ const app = document.getElementById('app');
 app.addEventListener('click', handleClick);
 app.addEventListener('input', handleInput);
 render();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   <image-slot> storage backend
+   Routes avatars → children.avatar_url and covers → stories.cover_url, uploads
+   to the private story-images bucket, and serves short-lived signed URLs.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  const urlCache = new Map(); // storage path -> { url, exp }
+
+  async function signed(path) {
+    if (!path) return null;
+    const now = Date.now();
+    const hit = urlCache.get(path);
+    if (hit && hit.exp > now) return hit.url;
+    const url = await DB.images.signedUrl(path, 3600);
+    urlCache.set(path, { url: url, exp: now + 55 * 60 * 1000 });
+    return url;
+  }
+
+  function pathForId(id) {
+    if (id.indexOf('avatar-') === 0) return state.profile && state.profile.avatarUrl;
+    if (id.indexOf('cover-') === 0) {
+      const sid = id.slice('cover-'.length);
+      const st = (state.history || []).find(h => String(h.id) === sid)
+        || (state.currentStory && String(state.currentStory.id) === sid ? state.currentStory : null);
+      return st && st.coverUrl;
+    }
+    return null;
+  }
+
+  window.ImageSlotBackend = {
+    peek: function (id) {                       // sync: cached signed URL, for instant paint
+      const path = pathForId(id);
+      if (!path) return null;
+      const hit = urlCache.get(path);
+      return hit && hit.exp > Date.now() ? hit.url : null;
+    },
+    resolve: async function (id) {              // async: fresh signed URL
+      if (!window.DB) return null;
+      return await signed(pathForId(id));
+    },
+    upload: async function (id, file) {
+      if (!window.DB) throw new Error('Not connected');
+      if (id.indexOf('avatar-') === 0) {
+        if (!state.profile || !state.profile.id) throw new Error('No profile to attach the avatar to');
+        const prev = state.profile.avatarUrl;
+        const path = await DB.images.upload(file, 'avatar');
+        await DB.children.update(state.profile.id, { avatarUrl: path });
+        state.profile = Object.assign({}, state.profile, { avatarUrl: path });
+        if (prev && prev !== path) DB.images.remove(prev).catch(function () {});
+        return await signed(path);
+      }
+      if (id.indexOf('cover-') === 0) {
+        const sid = id.slice('cover-'.length);
+        const st = (state.history || []).find(h => String(h.id) === sid);
+        const prev = st && st.coverUrl;
+        const path = await DB.images.upload(file, 'cover');
+        await DB.stories.update(sid, { coverUrl: path });
+        state.history = state.history.map(h => String(h.id) === sid ? Object.assign({}, h, { coverUrl: path }) : h);
+        if (state.currentStory && String(state.currentStory.id) === sid) {
+          state.currentStory = Object.assign({}, state.currentStory, { coverUrl: path });
+        }
+        if (prev && prev !== path) DB.images.remove(prev).catch(function () {});
+        return await signed(path);
+      }
+      throw new Error('Unknown image slot: ' + id);
+    }
+  };
+})();
 
 /* ══════════════════════════════════════════════════════════════════════════
    Bootstrap — restore an existing Supabase session, else show welcome

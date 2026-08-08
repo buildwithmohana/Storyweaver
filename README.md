@@ -20,8 +20,9 @@ Open `index.html` in any modern browser. No build step, no dependencies.
 - **Stories** — per-child history, favorites preserved
 - **Profiles** — child detail editor (name, age, gender, standing preferences),
   delete-with-confirm, account & log out
-- **Persistence** — account, profile, history, favorites, and uploaded
-  avatars/covers are stored in `localStorage` and survive reloads
+- **Persistence** — account, profile, history, and favorites are stored in
+  Supabase (Postgres + Auth) and sync across devices; uploaded avatars and
+  covers live in a private Supabase Storage bucket (served via signed URLs)
 
 ## Structure
 

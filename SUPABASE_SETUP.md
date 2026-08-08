@@ -103,10 +103,21 @@ const path    = await DB.images.upload(fileBlob, 'avatar.png');
 const url      = await DB.images.signedUrl(path);   // temporary URL for <img src>
 ```
 
-## Next step — swap `localStorage` for `DB`
+## Images
 
-The app currently persists to `localStorage` (see `PERSIST_KEY` and the
-`loadData` / `persist` functions in `index.html`). The integration work is to
-replace those calls with the `DB` methods above and gate the app behind
-`DB.auth`. I can do that whenever you're ready — just say the word (ideally once
-you've finished steps 1–5 so I can test against your live project).
+Avatars and story covers upload to the private `story-images` bucket and are
+displayed via short-lived signed URLs. In `index.html`, the `<image-slot>`
+component talks to a small `window.ImageSlotBackend` adapter that maps:
+
+- `avatar-*` slots → `children.avatar_url`
+- `cover-<storyId>` slots → `stories.cover_url`
+
+Files are stored under `<user_id>/<timestamp>-<name>`, which the Storage RLS
+policies restrict to the owning user. If no backend is present (e.g. the client
+failed to load), the component falls back to `localStorage` so it still works.
+
+## Status
+
+The app is fully wired to Supabase: real email/password auth with session
+restore, cloud-synced child profiles and stories, favorites, and image uploads.
+`localStorage` is now only a fallback for the image component.
