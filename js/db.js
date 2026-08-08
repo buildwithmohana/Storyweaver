@@ -17,8 +17,8 @@
   'use strict';
 
   // --- Configuration --------------------------------------------------------
-  var SUPABASE_URL = 'https://YOUR-PROJECT-ref.supabase.co';
-  var SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+  var SUPABASE_URL = 'https://gunqtnjyymgstxkwwyhl.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_wKVJe9NblaNO_GsAIZ0wGw_-KjYBjWL';
 
   if (!global.supabase || !global.supabase.createClient) {
     throw new Error('[DB] Supabase client not found. Load @supabase/supabase-js before db.js.');
