@@ -187,6 +187,9 @@ textarea.input { min-height: 64px; resize: vertical; }
   }
 }
 </style>
+<!-- Supabase client + data-access layer (see SUPABASE_SETUP.md / js/db.js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/db.js"></script>
 </head>
 <body>
 <div class="stage">
@@ -354,47 +357,18 @@ function buildStoryEntry(id, character, lessonLabel, bankIndex, date, favorite) 
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   App state + persistence
+   App state + Supabase-backed data
    ══════════════════════════════════════════════════════════════════════ */
 const MUTED = 'color-mix(in srgb, var(--color-text) 55%, transparent)';
-const PERSIST_KEY = 'storyweaver.app.v1';
 
-function defaultData() {
-  return {
-    account: null,
-    nextId: 3,
-    profile: { name: 'Mira', age: 4, gender: 'Girl', preferences: "Loves unicorns and dinosaurs. A little afraid of the dark." },
-    history: [
-      buildStoryEntry(2, 'a curious raccoon named Pip', 'Being brave', 0, 'Aug 4', true),
-      buildStoryEntry(1, 'a gentle bear cub named Theo', 'Kindness', 1, 'Aug 1', false)
-    ]
-  };
-}
-
-function loadData() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(PERSIST_KEY));
-    if (raw && typeof raw === 'object') return Object.assign(defaultData(), raw);
-  } catch {}
-  return defaultData();
-}
-
-function persist() {
-  try {
-    localStorage.setItem(PERSIST_KEY, JSON.stringify({
-      account: state.account, nextId: state.nextId,
-      profile: state.profile, history: state.history
-    }));
-  } catch {}
-}
-
-const data = loadData();
 const state = {
-  screen: data.account ? 'home' : 'welcome',
-  account: data.account,
+  screen: 'booting',       // splash shown until the session check resolves
+  account: null,
   authMode: 'create',
   authEmail: '',
   authPassword: '',
+  authError: '',
+  authBusy: false,
   character: '',
   selectedLesson: null,
   customMode: false,
@@ -406,15 +380,35 @@ const state = {
   addChildTapped: false,
   profileDetailOpen: false,
   deleteConfirm: false,
-  nextId: data.nextId,
-  profile: data.profile,
-  history: data.history
+  profile: null,           // the (single) child profile, including its DB id
+  history: []              // this child's saved stories, newest first
 };
 
 function setState(patch) {
   Object.assign(state, patch);
-  persist();
   render();
+}
+
+/* Load the signed-in parent's child profile + stories from Supabase. A brand
+   new account has no child yet, so seed one so the profile editor is usable. */
+async function loadUserData(user) {
+  let children = await DB.children.list();
+  if (!children.length) {
+    const seeded = await DB.children.create({ name: 'My child', age: '', gender: '', preferences: '' });
+    children = [seeded];
+  }
+  const profile = children[0];
+  const history = await DB.stories.list(profile.id);
+  return { account: { email: user.email }, profile: profile, history: history };
+}
+
+function resetToWelcome(extra) {
+  setState(Object.assign({
+    screen: 'welcome', account: null, profile: null, history: [],
+    authEmail: '', authPassword: '', authError: '', authBusy: false,
+    currentStory: null, profileDetailOpen: false, deleteConfirm: false,
+    character: '', selectedLesson: null, customMode: false, customLesson: '', notes: ''
+  }, extra || {}));
 }
 
 function canGenerate() {
@@ -434,23 +428,41 @@ function esc(s) {
 }
 
 const actions = {
-  'create-account': () => setState({ screen: 'authForm', authMode: 'create' }),
-  'login': () => setState({ screen: 'authForm', authMode: 'login' }),
-  'back-welcome': () => setState({ screen: 'welcome' }),
-  'toggle-auth-mode': () => setState({ authMode: state.authMode === 'create' ? 'login' : 'create' }),
-  'submit-auth': () => {
-    if (!authValid()) return;
-    setState({ screen: 'home', account: { email: state.authEmail.trim() }, authPassword: '' });
+  'create-account': () => setState({ screen: 'authForm', authMode: 'create', authError: '' }),
+  'login': () => setState({ screen: 'authForm', authMode: 'login', authError: '' }),
+  'back-welcome': () => setState({ screen: 'welcome', authError: '' }),
+  'toggle-auth-mode': () => setState({ authMode: state.authMode === 'create' ? 'login' : 'create', authError: '' }),
+  'submit-auth': async () => {
+    if (!authValid() || state.authBusy) return;
+    const email = state.authEmail.trim();
+    const password = state.authPassword;
+    setState({ authBusy: true, authError: '' });
+    try {
+      if (state.authMode === 'create') await DB.auth.signUp(email, password);
+      else await DB.auth.signIn(email, password);
+
+      const session = await DB.auth.getSession();
+      if (!session || !session.user) {
+        // e.g. "Confirm email" is on — no session is issued until confirmed
+        setState({ authBusy: false, authPassword: '', authMode: 'login',
+          authError: 'Account created. Check your email to confirm, then log in.' });
+        return;
+      }
+      const data = await loadUserData(session.user);
+      setState({ screen: 'home', authBusy: false, authPassword: '', authError: '',
+        account: data.account, profile: data.profile, history: data.history });
+    } catch (err) {
+      setState({ authBusy: false, authError: (err && err.message) || 'Something went wrong. Please try again.' });
+    }
   },
   'toggle-custom': () => setState({ customMode: !state.customMode, selectedLesson: null }),
   'generate': () => {
     if (!canGenerate()) return;
     const lessonLabel = state.customMode ? state.customLesson.trim() : state.selectedLesson;
     const character = state.character.trim();
-    const id = state.nextId;
-    setState({ screen: 'loading', nextId: state.nextId + 1 });
+    setState({ screen: 'loading' });
     setTimeout(() => {
-      const story = buildStoryEntry(id, character, lessonLabel, 0, 'Tonight', false);
+      const story = buildStoryEntry(null, character, lessonLabel, 0, 'Tonight', false);
       story.fromHistory = false;
       setState({ screen: 'reading', currentStory: story });
     }, 1100);
@@ -465,24 +477,44 @@ const actions = {
       setState({ currentStory: updated, regenerating: false });
     }, 500);
   },
-  'toggle-favorite': () => {
+  'toggle-favorite': async () => {
     const cs = state.currentStory;
     if (!cs) return;
-    const updated = Object.assign({}, cs, { favorite: !cs.favorite });
+    const nextFav = !cs.favorite;
+    // optimistic local update
+    const updated = Object.assign({}, cs, { favorite: nextFav });
     let history = state.history;
-    if (history.some(h => h.id === updated.id)) history = history.map(h => h.id === updated.id ? Object.assign({}, h, { favorite: updated.favorite }) : h);
+    if (cs.id) history = history.map(h => h.id === cs.id ? Object.assign({}, h, { favorite: nextFav }) : h);
     setState({ currentStory: updated, history });
+    // persist only if this story already exists in the DB
+    if (cs.id && cs.fromHistory) {
+      try {
+        await DB.stories.setFavorite(cs.id, nextFav);
+      } catch (e) {
+        // revert on failure
+        setState({
+          currentStory: Object.assign({}, cs, { favorite: !nextFav }),
+          history: state.history.map(h => h.id === cs.id ? Object.assign({}, h, { favorite: !nextFav }) : h)
+        });
+      }
+    }
   },
-  'finish': () => {
+  'finish': async () => {
     const cs = state.currentStory;
     if (!cs) return;
-    if (!cs.fromHistory) {
+    if (cs.fromHistory) { setState({ screen: 'history', currentStory: null }); return; }
+    try {
+      const saved = await DB.stories.create({
+        childId: state.profile ? state.profile.id : null,
+        character: cs.character, lesson: cs.lesson, bankIndex: cs.bankIndex,
+        tldr: cs.tldr, body: cs.body, favorite: cs.favorite
+      });
       setState({
-        screen: 'home', history: [cs, ...state.history], currentStory: null,
+        screen: 'home', history: [saved, ...state.history], currentStory: null,
         character: '', selectedLesson: null, customMode: false, customLesson: '', notes: ''
       });
-    } else {
-      setState({ screen: 'history', currentStory: null });
+    } catch (err) {
+      alert('Could not save the story: ' + ((err && err.message) || 'unknown error'));
     }
   },
   'back-reading': () => {
@@ -492,10 +524,14 @@ const actions = {
   'open-profile-detail': () => setState({ profileDetailOpen: true }),
   'back-profile-list': () => setState({ profileDetailOpen: false, deleteConfirm: false }),
   'add-child': () => setState({ addChildTapped: true }),
-  'log-out': () => setState({ screen: 'welcome', account: null, authEmail: '', authPassword: '' }),
+  'log-out': async () => { try { await DB.auth.signOut(); } catch (e) {} resetToWelcome(); },
   'ask-delete': () => setState({ deleteConfirm: true }),
   'cancel-delete': () => setState({ deleteConfirm: false }),
-  'confirm-delete': () => setState({ profile: null, history: [], profileDetailOpen: false, deleteConfirm: false }),
+  'confirm-delete': async () => {
+    const p = state.profile;
+    if (p && p.id) { try { await DB.children.remove(p.id); } catch (e) {} }
+    setState({ profile: null, history: [], profileDetailOpen: false, deleteConfirm: false });
+  },
   'tab-home': () => setState({ screen: 'home', currentStory: null, profileDetailOpen: false }),
   'tab-history': () => setState({ screen: 'history', currentStory: null, profileDetailOpen: false }),
   'tab-profile': () => setState({ screen: 'profile', currentStory: null, profileDetailOpen: false })
@@ -520,6 +556,20 @@ function handleClick(e) {
 
 /* input handling — update state silently, refresh only dynamic controls to
    keep focus/caret in place while typing */
+/* profile edits are debounced into a single Supabase update */
+let _profilePatch = {};
+let _profileSaveTimer = null;
+function saveProfileSoon(patch) {
+  if (!state.profile || !state.profile.id) return;
+  Object.assign(_profilePatch, patch);
+  const id = state.profile.id;
+  clearTimeout(_profileSaveTimer);
+  _profileSaveTimer = setTimeout(() => {
+    const p = _profilePatch; _profilePatch = {};
+    DB.children.update(id, p).catch(() => {});
+  }, 600);
+}
+
 function handleInput(e) {
   const el = e.target.closest('[data-field]');
   if (!el) return;
@@ -528,11 +578,11 @@ function handleInput(e) {
     'auth-email': 'authEmail', 'auth-password': 'authPassword',
     'character': 'character', 'custom-lesson': 'customLesson', 'notes': 'notes'
   };
-  if (map[field]) { state[map[field]] = el.value; syncControls(); persist(); return; }
-  if (field === 'name') { state.profile = Object.assign({}, state.profile, { name: el.value }); persist(); return; }
-  if (field === 'age') { state.profile = Object.assign({}, state.profile, { age: el.value }); persist(); return; }
-  if (field === 'gender') { state.profile = Object.assign({}, state.profile, { gender: el.value }); persist(); return; }
-  if (field === 'preferences') { state.profile = Object.assign({}, state.profile, { preferences: el.value }); persist(); return; }
+  if (map[field]) { state[map[field]] = el.value; syncControls(); return; }
+  if (field === 'name') { state.profile = Object.assign({}, state.profile, { name: el.value }); saveProfileSoon({ name: el.value }); return; }
+  if (field === 'age') { state.profile = Object.assign({}, state.profile, { age: el.value }); saveProfileSoon({ age: el.value }); return; }
+  if (field === 'gender') { state.profile = Object.assign({}, state.profile, { gender: el.value }); saveProfileSoon({ gender: el.value }); return; }
+  if (field === 'preferences') { state.profile = Object.assign({}, state.profile, { preferences: el.value }); saveProfileSoon({ preferences: el.value }); return; }
 }
 
 /* toggle disabled state of context buttons without a re-render */
@@ -540,7 +590,7 @@ function syncControls() {
   const gen = document.querySelector('[data-action="generate"]');
   if (gen) gen.disabled = !canGenerate();
   const auth = document.querySelector('[data-action="submit-auth"]');
-  if (auth) auth.disabled = !authValid();
+  if (auth) auth.disabled = !authValid() || state.authBusy;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -585,11 +635,12 @@ function screenAuth() {
       <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Email</label>
       <input class="input" type="email" placeholder="you@example.com" data-field="auth-email" value="${esc(state.authEmail)}">
     </div>
-    <div style="margin-bottom:24px">
+    <div style="margin-bottom:${state.authError ? '14px' : '24px'}">
       <label style="display:block;font-size:12px;margin-bottom:6px;color:color-mix(in srgb, var(--color-text) 70%, transparent)">Password</label>
       <input class="input" type="password" placeholder="••••••••" data-field="auth-password" value="${esc(state.authPassword)}">
     </div>
-    <button class="btn btn-primary btn-block" ${authValid() ? '' : 'disabled'} data-action="submit-auth" style="font-size:15px;padding:12px">${submitLabel}</button>
+    ${state.authError ? `<div style="font-size:12.5px;color:var(--color-accent-300);background:var(--color-accent-900);border:1px solid var(--color-accent-800);border-radius:var(--radius-md);padding:8px 10px;margin-bottom:16px;line-height:1.4">${esc(state.authError)}</div>` : ''}
+    <button class="btn btn-primary btn-block" ${(authValid() && !state.authBusy) ? '' : 'disabled'} data-action="submit-auth" style="font-size:15px;padding:12px">${state.authBusy ? 'Please wait…' : submitLabel}</button>
     <button data-action="toggle-auth-mode" style="background:none;border:none;color:var(--color-accent-300);font-size:13px;cursor:pointer;margin-top:16px;font-family:var(--font-body)">${switchLabel}</button>
   </div>`;
 }
@@ -662,6 +713,13 @@ function screenHome() {
 
       <button class="btn btn-primary btn-block" ${canGenerate() ? '' : 'disabled'} data-action="generate" style="font-size:15px;padding:12px">Generate story</button>
     </div>
+  </div>`;
+}
+
+function screenBooting() {
+  return `
+  <div class="screen" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--color-bg)">
+    <div style="width:44px;height:44px;border-radius:50%;border:3px solid var(--color-accent-800);border-top-color:var(--color-accent);animation:spin 0.9s linear infinite"></div>
   </div>`;
 }
 
@@ -846,6 +904,7 @@ function tabBar() {
    ══════════════════════════════════════════════════════════════════════ */
 function currentScreenHTML() {
   switch (state.screen) {
+    case 'booting': return screenBooting();
     case 'welcome': return screenWelcome();
     case 'authForm': return screenAuth();
     case 'home': return screenHome();
@@ -867,6 +926,35 @@ const app = document.getElementById('app');
 app.addEventListener('click', handleClick);
 app.addEventListener('input', handleInput);
 render();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Bootstrap — restore an existing Supabase session, else show welcome
+   ══════════════════════════════════════════════════════════════════════ */
+async function init() {
+  if (!window.DB) {
+    setState({ screen: 'welcome',
+      authError: 'Could not load the app backend. Check your connection and reload.' });
+    return;
+  }
+  try {
+    const session = await DB.auth.getSession();
+    if (session && session.user) {
+      const data = await loadUserData(session.user);
+      setState({ screen: 'home', account: data.account, profile: data.profile, history: data.history });
+    } else {
+      setState({ screen: 'welcome' });
+    }
+  } catch (e) {
+    setState({ screen: 'welcome' });
+  }
+  // React to sign-out / token expiry happening outside the explicit log-out flow
+  DB.auth.onChange(function (user) {
+    if (!user && state.screen !== 'welcome' && state.screen !== 'authForm' && state.screen !== 'booting') {
+      resetToWelcome();
+    }
+  });
+}
+init();
 </script>
 </body>
 </html>
